@@ -32,9 +32,11 @@ let gameOver = false;
 let score = 0;
 let highScore = 0;
 let velocity = -2;  // Base velocity for walls
-let wallSpawnInterval = 1500;  // Base interval between wall spawns in milliseconds
+let wallSpawnInterval = 1500;  // Initial interval between wall spawns in milliseconds
 let wallTimer;
 let powerUpTimer;
+let beeSpeedIncreaseInterval = 10000; // Interval to increase bee's speed
+let beeSpeedTimer;
 
 window.onload = function() {
     board = document.getElementById("board");
@@ -49,7 +51,7 @@ window.onload = function() {
     wallImg.src = "images/Wall.png";
 
     powerUpImg = new Image();
-    powerUpImg.src = "images/PowerUp.png"; // Make sure the path is correct
+    powerUpImg.src = "images/PowerUp.png"; // Ensure the path is correct
 
     document.addEventListener('keydown', function(event) {
         if (event.key === " " || event.key === "Spacebar") {
@@ -63,8 +65,15 @@ window.onload = function() {
 
     startWallSpawn();
     startPowerUpSpawn();
+    startBeeSpeedTimer();
     requestAnimationFrame(update);
 };
+
+function startBeeSpeedTimer() {
+    beeSpeedTimer = setInterval(function() {
+        beeVelocityY -= 0.5; // Gradually increase bee's falling speed
+    }, beeSpeedIncreaseInterval);
+}
 
 function update() {
     if (gameOver) {
@@ -94,7 +103,7 @@ function updateBee() {
 
 function updateWalls() {
     wallArray.forEach((wall, index) => {
-        wall.x += velocity;  // Walls move faster with increasing difficulty
+        wall.x += velocity;
         context.drawImage(wallImg, wall.x, wall.y, wall.width, wall.height);
 
         if (wall.x + wall.width < 0) {
@@ -105,32 +114,51 @@ function updateWalls() {
             wall.passed = true;
             score++;
             document.getElementById("scoreDisplay").innerText = "Your score: " + score;
+            adjustGameDifficulty();
         }
     });
 }
 
+function adjustGameDifficulty() {
+    if (score % 10 === 0 && score !== 0) {
+        velocity -= 0.5; // Increase wall speed
+        if (wallSpawnInterval > 800) {
+            wallSpawnInterval *= 0.9;
+            clearInterval(wallTimer);
+            startWallSpawn();
+        }
+    }
+    if (score % 35 === 0 && score !== 0) {
+        placeExtraWall();
+    }
+}
+
+function placeExtraWall() {
+    placeWall();
+    placeWall();
+}
+
 function updatePowerUps() {
     powerUps.forEach((powerUp, index) => {
-        powerUp.x += powerUpSpeed; // Move power-ups left towards the bee
+        powerUp.x += powerUpSpeed;
         context.drawImage(powerUpImg, powerUp.x, powerUp.y, 30, 30);
 
         if (powerUp.x + 30 < 0) {
-            powerUps.splice(index, 1); // Remove if it goes off-screen
+            powerUps.splice(index, 1);
         }
     });
 }
 
 function checkCollisions() {
-    const hitboxMargin = 5; // Margin to reduce the hitbox size
-
+    const hitboxMargin = 7; // Margin to reduce the hitbox size
     wallArray.forEach(wall => {
-        if (bee.x + bee.width - hitboxMargin > wall.x + hitboxMargin && 
+        if (bee.x + bee.width - hitboxMargin > wall.x + hitboxMargin &&
             bee.x + hitboxMargin < wall.x + wall.width - hitboxMargin &&
-            bee.y + bee.height - hitboxMargin > wall.y + hitboxMargin && 
+            bee.y + bee.height - hitboxMargin > wall.y + hitboxMargin &&
             bee.y + hitboxMargin < wall.y + wall.height - hitboxMargin) {
             if (powerUpCount > 0) {
-                powerUpCount--;  // Use one power-up to avoid this collision
-                wallArray.splice(wallArray.indexOf(wall), 1);  // Remove the wall that was hit
+                powerUpCount--;
+                wallArray.splice(wallArray.indexOf(wall), 1);
             } else {
                 gameOver = true;
             }
@@ -138,27 +166,30 @@ function checkCollisions() {
     });
 
     powerUps.forEach((powerUp, index) => {
-        if (bee.x + bee.width - hitboxMargin > powerUp.x + hitboxMargin && 
+        if (bee.x + bee.width - hitboxMargin > powerUp.x + hitboxMargin &&
             bee.x + hitboxMargin < powerUp.x + 30 - hitboxMargin &&
-            bee.y + bee.height - hitboxMargin > powerUp.y + hitboxMargin && 
+            bee.y + bee.height - hitboxMargin > powerUp.y + hitboxMargin &&
             bee.y + hitboxMargin < powerUp.y + 30 - hitboxMargin) {
-            powerUpCount++;  // Increment power-up count
-            powerUps.splice(index, 1); // Collect power-up and remove it
+            powerUpCount++;
+            powerUps.splice(index, 1);
         }
     });
 }
 
 function placeWall() {
-    let randomWallY = Math.random() * (boardHeight - wallHeight);
-    let wall = {
-        img: wallImg,
-        x: wallX,
-        y: randomWallY,
-        width: wallWidth,
-        height: wallHeight,
-        passed: false
-    };
-    wallArray.push(wall);
+    // Can change the number of walls to be placed at once
+    for (let i = 0; i < 2; i++) {
+        let randomWallY = Math.random() * (boardHeight - wallHeight);
+        let wall = {
+            img: wallImg,
+            x: wallX,
+            y: randomWallY,
+            width: wallWidth,
+            height: wallHeight,
+            passed: false
+        };
+        wallArray.push(wall);
+    }
 }
 
 function startWallSpawn() {
@@ -166,11 +197,11 @@ function startWallSpawn() {
 }
 
 function startPowerUpSpawn() {
-    powerUpTimer = setInterval(placePowerUp, 10000); // Place a power-up every 10 seconds
+    powerUpTimer = setInterval(placePowerUp, 15000); // Place a power-up every 15 seconds
 }
 
 function placePowerUp() {
-    let randomPowerUpX = boardWidth; // Start at the far right of the canvas
+    let randomPowerUpX = boardWidth;
     let randomPowerUpY = Math.random() * (boardHeight - 30);
     let powerUp = {
         x: randomPowerUpX,
@@ -182,7 +213,7 @@ function placePowerUp() {
 function displayPowerUpCount() {
     context.font = "18px Arial";
     context.fillStyle = "black";
-    context.fillText("Power-ups: " + powerUpCount, boardWidth - 150, 30); // Display power-up count on top right
+    context.fillText("Flowers: " + powerUpCount, boardWidth - 150, 30);
 }
 
 function displayGameOverPopup() {
@@ -192,14 +223,14 @@ function displayGameOverPopup() {
 }
 
 function restartGame() {
-    score = 0;
+    score = 0;  
     gameOver = false;
     bee.y = beeY;
     wallArray = [];
-    powerUps = [];
+    powerUps = []; 
     powerUpCount = 0;
     velocity = -2;
-    wallSpawnInterval = 1500;
+    wallSpawnInterval = 1300;
     clearInterval(wallTimer);
     startWallSpawn();
     document.getElementById("gameOverPopup").style.display = 'none';
