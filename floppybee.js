@@ -1,3 +1,4 @@
+// Variables
 let board;
 let boardWidth = 640;
 let boardHeight = 880;
@@ -16,7 +17,8 @@ let bee = {
     x: beeX,
     y: beeY,
     width: beeWidth,
-    height: beeHeight
+    height: beeHeight,
+    hasShield: false
 };
 
 let wallArray = [];
@@ -37,7 +39,10 @@ let wallTimer;
 let powerUpTimer;
 let beeSpeedIncreaseInterval = 10000; // Interval to increase bee's speed
 let beeSpeedTimer;
+let powerUpFrenzyTimer;
+let inPowerUpFrenzy = false;
 
+// Event listeners
 window.onload = function() {
     board = document.getElementById("board");
     board.width = boardWidth;
@@ -69,10 +74,28 @@ window.onload = function() {
     requestAnimationFrame(update);
 };
 
+// Functions
 function startBeeSpeedTimer() {
     beeSpeedTimer = setInterval(function() {
         beeVelocityY -= 0.5; // Gradually increase bee's falling speed
     }, beeSpeedIncreaseInterval);
+}
+
+function applyPowerUp(type) {
+    switch(type) {
+        case 'speedBoost':
+            velocity -= 1; // Increase speed
+            setTimeout(() => velocity += 1, 5000); // Lasts for 5 seconds
+            break;
+        case 'shield':
+            bee.hasShield = true; // Protect from the next hit
+            setTimeout(() => bee.hasShield = false, 10000);
+            break;
+        case 'multiplier':
+            scoreMultiplier = 2;
+            setTimeout(() => scoreMultiplier = 1, 10000);
+            break;
+    }
 }
 
 function update() {
@@ -84,11 +107,15 @@ function update() {
     context.clearRect(0, 0, boardWidth, boardHeight);
 
     updateBee();
-    updateWalls();
+    if (!inPowerUpFrenzy) {
+        updateWalls();
+    }
     updatePowerUps();
     checkCollisions();
     displayPowerUpCount();  // Display power-up count
-}
+
+    }
+
 
 function updateBee() {
     beeVelocityY += gravity;
@@ -178,7 +205,8 @@ function checkCollisions() {
 
 function placeWall() {
     // Can change the number of walls to be placed at once
-    for (let i = 0; i < 2; i++) {
+    let numberOfWalls = score >= 50 ? 2 : 1;
+    for (let i = 0; i < numberOfWalls; i++) {
         let randomWallY = Math.random() * (boardHeight - wallHeight);
         let wall = {
             img: wallImg,
