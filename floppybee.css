@@ -27,3 +27,15 @@ body {
     border: 2px solid black;
     z-index: 1000;
 }
+
+/* Media query for smaller screens */
+@media (max-width: 480px) {
+    body {
+        font-size: 16px;
+    }
+
+    #board {
+        width: 100%;
+        height: auto;
+    }
+}
